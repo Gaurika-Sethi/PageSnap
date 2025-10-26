@@ -17,18 +17,51 @@ function Chatbot() {
   }, [messages]);
   
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (input.trim() === "") return;
 
-    setMessages(prev => [...prev, { sender: "user", text: input }]);
+    const userMessage = input.trim();
+    setMessages(prev => [...prev, { sender: "user", text: userMessage }]);
     setInput("");
-  
-    setTimeout(() => {
+
+    // Show loading message
+    setMessages(prev => [
+      ...prev,
+      { sender: "bot", text: "Thinking of great book recommendations for you..." },
+    ]);
+
+    try {
+      const response = await fetch('/api/bookchat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: userMessage }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Replace the loading message with the actual response
+        setMessages(prev => [
+          ...prev.slice(0, -1), // Remove the loading message
+          { sender: "bot", text: data.message },
+        ]);
+      } else {
+        // Replace the loading message with an error message
+        setMessages(prev => [
+          ...prev.slice(0, -1), // Remove the loading message
+          { sender: "bot", text: "Sorry, I'm having trouble finding book recommendations right now. Please try again!" },
+        ]);
+      }
+    } catch (error) {
+      console.error('Error calling API:', error);
+      // Replace the loading message with an error message
       setMessages(prev => [
-        ...prev,
-        { sender: "bot", text: "Of course! What kind of book are you in mood for?" },
+        ...prev.slice(0, -1), // Remove the loading message
+        { sender: "bot", text: "Sorry, I'm having trouble finding book recommendations right now. Please try again!" },
       ]);
-    }, 500);
+    }
   };
 
   return (
@@ -51,7 +84,7 @@ function Chatbot() {
   {messages.map((msg, index) => (
     <div
       key={index}
-      className={`max-w-[70%] w-fit break-words p-2 rounded-lg text-sm overflow-hidden ${
+      className={`max-w-[70%] w-fit break-words p-2 rounded-lg text-sm overflow-hidden whitespace-pre-line ${
         msg.sender === "user"
           ? "ml-auto bg-[#B99E6A] border border-[#D1B890] text-[#000000]"
           : "mr-auto bg-[#EADCC0] border border-[#B89C72] text-[#000000]"
